@@ -65,3 +65,8 @@ The first ADB log was emitted at `2024-05-24 09:52:00.183`, which matches the `n
 However, the second ADB log was emitted at `2024-05-24 10:09:23.828`, while that `now()` is `1716537239178.248` (`Friday, 24 May 2024 09:53:59`).
 
 As you can see, the second timestamp has an offset of **~15 minutes** ⚠️
+As a result, any follow-up DataDog actions or timings will be inserted wrongly into the timeline.
+
+## Possible root cause
+
+While debugging, we noticed that the result of React Native's [performance.now()](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now) seems to be incorrect on Android after locking the device for some time while the app is in the foreground.
