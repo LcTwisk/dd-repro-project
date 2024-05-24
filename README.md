@@ -1,79 +1,67 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+This is a small project that should help reproducing an (Android) React Native DataDog bug, resulting in all timings/actions to be off after locking the screen while the app is in the foreground.
 
-# Getting Started
+## Getting started:
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+Please follow these steps to get the reproduction app running on your device.
 
-## Step 1: Start the Metro Server
-
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
-
-To start Metro, run the following command from the _root_ of your React Native project:
+1. Install dependencies:
 
 ```bash
-# using npm
-npm start
-
-# OR using Yarn
-yarn start
+yarn install
 ```
 
-## Step 2: Start your Application
-
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
+2. Create a release bundle:
 
 ```bash
-# using npm
-npm run android
-
-# OR using Yarn
-yarn android
+yarn react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/
 ```
 
-### For iOS
+3. Create a release APK:
 
 ```bash
-# using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+cd android && ./gradlew assembleRelease
 ```
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+4. Install APK:
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+```bash
+adb install app/build/outputs/apk/release/app-release.apk
+```
 
-## Step 3: Modifying your App
+## Reproduction steps:
 
-Now that you have successfully run the app, let's modify it.
+1. Run project on a device (not on an emulator)
+2. Disconnect device (otherwise the device won't sleep ⚠️)
+3. Lock device while app is in the foreground
+4. Wait 10 minutes
+5. Connect the device with your computer again
+6. Unlock device
+7. Inspect ADB logs containing `DEBUG_TIME`
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+After following these steps, you can compare the different logs. It's important to compare the actual time of the ADB log entry with the `now()` timestamp (the [TimeProvider timestamp](https://github.com/DataDog/dd-sdk-reactnative/blob/9a5bf3cf53fdb55bb99496d55d6ce7b50f817a47/packages/core/src/utils/TimeProvider.tsx#L47)) in the log payload.
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+While `now()` seems to match the ADB log time when initially opening the app, it's not longer correct after the device was locked for some time.
 
-## Congratulations! :tada:
+### Example logs:
 
-You've successfully run and modified your React Native App. :partying_face:
+```bash
+# The initial log
+2024-05-24 09:52:00.183 23224-23255 ReactNativeJS           com.datadogtry                       I  'DEBUG_TIME', { baseOffset: 1716534807180.3003,
+                                                                                                      'Date.now()': 1716537120182,
+                                                                                                      'performance.now()': 2313001.884388,
+                                                                                                      'now()': 1716537120182.197 }
+# The second log, emitted after the phone was locked for some time
+2024-05-24 10:09:23.828 23224-23255 ReactNativeJS           com.datadogtry                       I  'DEBUG_TIME', { baseOffset: 1716534807180.3003,
+                                                                                                      'Date.now()': 1716538163828,
+                                                                                                      'performance.now()': 2431997.942877,
+                                                                                                      'now()': 1716537239178.248 }
 
-### Now what?
+```
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+#### Analysis
 
-# Troubleshooting
+The first ADB log was emitted at `2024-05-24 09:52:00.183`, which matches the `now()` of `1716537120182.197` (`Friday, 24 May 2024 09:52:00.182`)
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+However, the second ADB log was emitted at `2024-05-24 10:09:23.828`, while that `now()` is `1716537239178.248` (`Friday, 24 May 2024 09:53:59`).
 
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+As you can see, the second timestamp has an offset of **~15 minutes** ⚠️
