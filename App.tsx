@@ -5,7 +5,8 @@
  * @format
  */
 
-import React from 'react';
+import {useFocusEffect} from '@react-navigation/native';
+import React, {useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
@@ -24,6 +25,7 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+import {TimeProviderInstance} from './TimeProvider';
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -57,6 +59,12 @@ function Section({children, title}: SectionProps): React.JSX.Element {
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
+
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('DEBUG_TIME', TimeProviderInstance.getDebugInfo());
+    }, []),
+  );
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
