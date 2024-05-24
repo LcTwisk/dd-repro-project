@@ -70,3 +70,5 @@ As a result, any follow-up DataDog actions or timings will be inserted wrongly i
 ## Possible root cause
 
 While debugging, we noticed that the result of React Native's [performance.now()](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now) seems to be incorrect on Android after locking the device for some time while the app is in the foreground.
+
+It might be worth to investigate if the issue is reproducable when using [react-native-performance](https://github.com/oblador/react-native-performance) instead. [According to the author](https://github.com/oblador/react-native-performance/issues/93#issuecomment-1469933901), Facebook's implementation of the Performance API is not very reliable.
