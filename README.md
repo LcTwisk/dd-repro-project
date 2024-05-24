@@ -31,7 +31,7 @@ adb install app/build/outputs/apk/release/app-release.apk
 ## Reproduction steps:
 
 1. Run project on a device (not on an emulator)
-2. Disconnect device (otherwise the device won't sleep ⚠️)
+2. Disconnect any cables from the device (otherwise the device won't sleep ⚠️)
 3. Lock device while app is in the foreground
 4. Wait 10 minutes
 5. Connect the device with your computer again
