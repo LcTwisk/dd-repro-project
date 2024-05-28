@@ -1,0 +1,76 @@
+diff --git a/node_modules/react-native/ReactCommon/cxxreact/boot_clock.h b/node_modules/react-native/ReactCommon/cxxreact/boot_clock.h
+new file mode 100644
+--- /dev/null	2024-05-28 12:12:50
++++ b/node_modules/react-native/ReactCommon/cxxreact/boot_clock.h
+@@ -0,0 +1,19 @@
++// boot_clock.h
++#ifndef BOOT_CLOCK_H
++#define BOOT_CLOCK_H
++
++#include <chrono>
++#ifdef __linux__
++#include <ctime>
++#endif
++
++// A std::chrono clock based on CLOCK_BOOTTIME.
++class boot_clock {
++ public:
++  typedef std::chrono::nanoseconds duration;
++  typedef std::chrono::time_point<boot_clock, duration> time_point;
++
++  static time_point now();
++};
++
++#endif // BOOT_CLOCK_H
+\ No newline at end of file
+diff --git a/node_modules/react-native/ReactCommon/cxxreact/boot_clock.cpp b/node_modules/react-native/ReactCommon/cxxreact/boot_clock.cpp
+new file mode 100644
+--- /dev/null	2024-05-28 12:12:59
++++ b/node_modules/react-native/ReactCommon/cxxreact/boot_clock.cpp
+@@ -0,0 +1,14 @@
++// boot_clock.cpp
++#include "boot_clock.h"
++
++boot_clock::time_point boot_clock::now() {
++#ifdef __linux__
++  timespec ts;
++  clock_gettime(CLOCK_BOOTTIME, &ts);
++  return boot_clock::time_point(std::chrono::seconds(ts.tv_sec) +
++                                std::chrono::nanoseconds(ts.tv_nsec));
++#else
++  // Darwin and Windows do not support clock_gettime.
++  return boot_clock::time_point();
++#endif  // __linux__
++}
+\ No newline at end of file
+diff --git a/node_modules/react-native/ReactCommon/cxxreact/JSExecutor.cpp b/node_modules/react-native/ReactCommon/cxxreact/JSExecutor.cpp
+--- a/node_modules/react-native/ReactCommon/cxxreact/JSExecutor.cpp
++++ b/node_modules/react-native/ReactCommon/cxxreact/JSExecutor.cpp
+@@ -8,6 +8,7 @@
+ #include "JSExecutor.h"
+ 
+ #include "RAMBundleRegistry.h"
++#include "boot_clock.h"
+ 
+ #include <folly/Conv.h>
+ #include <jsinspector-modern/ReactCdp.h>
+@@ -26,10 +27,8 @@
+ }
+ 
+ double JSExecutor::performanceNow() {
+-  auto time = std::chrono::steady_clock::now();
+-  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+-                      time.time_since_epoch())
+-                      .count();
++  auto time = boot_clock::now();
++  auto duration = time.time_since_epoch().count();
+ 
+   constexpr double NANOSECONDS_IN_MILLISECOND = 1000000.0;
+   return duration / NANOSECONDS_IN_MILLISECOND;
+@@ -47,4 +46,4 @@
+       std::move(frontendChannel), sessionState, getDescription());
+ }
+ 
+-} // namespace facebook::react
+\ No newline at end of file
++} // namespace facebook::react
